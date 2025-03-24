@@ -6,8 +6,6 @@ __pycache__/
 checkpoints/
 checkpoints
 
-
-
 # C extensions
 *.so
 
