@@ -7,3 +7,5 @@ tqdm
 requests
 scikit-image
 Pillow
+scipy
+tensorboard
