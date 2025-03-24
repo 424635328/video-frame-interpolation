@@ -1,0 +1,6 @@
+batch_size: 2
+learning_rate: 0.0003
+num_epochs: 20
+train_data_dir: 'data/processed/train'
+val_data_dir: 'data/processed/val'
+checkpoint_path: 'checkpoints'
