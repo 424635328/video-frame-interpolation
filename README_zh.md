@@ -230,7 +230,7 @@ python inference.py
 
 ## 致谢
 
-*   本项目受到 [相关研究论文和开源实现](Add links or citations to related work if applicable) 的启发。 具体来说，EMA-VFI 架构建立在指数移动平均以实现时间一致性和可变形卷积以实现自适应特征融合的原理之上。 在此处引用相关论文。  例如，你可以引用 EDVR, RIFE, SepConv 等相关论文。
+*   本项目受到 [相关研究论文和开源实现](https://arxiv.org/abs/2011.11823) 的启发。 具体来说，EMA-VFI 架构建立在指数移动平均以实现时间一致性和可变形卷积以实现自适应特征融合的原理之上。 在此处引用相关论文。  例如，你可以引用 EDVR, RIFE, SepConv 等相关论文。
 *   Middlebury 数据集是光流和视频帧插值研究的宝贵资源。
 
 ## 许可证
