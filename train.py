@@ -69,7 +69,10 @@ if __name__ == '__main__':
     # **你需要初始化你的光流估计网络并移动到正确的设备**
     # **你需要替换下面的`YourFlowEstimator()` 为你实际的光流估计模型**
     try:
-        from models.sepconv_enhanced import YourFlowEstimator  # 确保路径正确
+        try:
+            from src.models.sepconv_enhanced import YourFlowEstimator  # 确保路径正确
+        except ImportError:
+            raise ImportError("Module 'src.models.sepconv_enhanced' not found. Ensure the module exists and is in the Python path.")
         flow_estimator = YourFlowEstimator().to(device)  # 实例化你的光流估计器
     except ImportError:
         print("请确保你的光流估计器存在(如果没有请忽略这个错误)")
