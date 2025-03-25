@@ -72,7 +72,7 @@ if __name__ == '__main__':
         from models.sepconv_enhanced import YourFlowEstimator  # 确保路径正确
         flow_estimator = YourFlowEstimator().to(device)  # 实例化你的光流估计器
     except ImportError:
-        print("请确保你的光流估计器存在")
+        print("请确保你的光流估计器存在(如果没有请忽略这个错误)")
         flow_estimator = None
 
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-5)
