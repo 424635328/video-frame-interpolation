@@ -5,11 +5,19 @@ from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
 class VideoDataset(Dataset):
-    def __init__(self, data_dir, transform=None, frame_interval=1):
+    def __init__(self, data_dir, transform=None, frame_interval=1,
+                  crop_size=(256, 256),  # 添加 crop_size 参数
+                 random_rotation=True,  # 添加 random_rotation 参数
+                 horizontal_flip=True,  # 添加 horizontal_flip 参数
+                 color_jitter=None):  # 添加 color_jitter 参数
         self.data_dir = data_dir
         self.transform = transform
         self.frame_interval = frame_interval
         self.image_pairs = []
+        self.crop_size = crop_size
+        self.random_rotation = random_rotation
+        self.horizontal_flip = horizontal_flip
+        self.color_jitter = color_jitter
 
         # 遍历每个视频序列 (例如 "Beanbags")
         for video_dir in os.listdir(self.data_dir):
@@ -36,30 +44,47 @@ class VideoDataset(Dataset):
         frame_t = Image.open(frame_t_path).convert('RGB')
         frame1 = Image.open(frame1_path).convert('RGB')
 
+        # 数据增强
+        if self.crop_size:
+            i, j, h, w = transforms.RandomCrop.get_params(
+                frame0, output_size=self.crop_size
+            )
+            frame0 = transforms.functional.crop(frame0, i, j, h, w)
+            frame_t = transforms.functional.crop(frame_t, i, j, h, w)
+            frame1 = transforms.functional.crop(frame1, i, j, h, w)
+
+        if self.random_rotation:
+            angle = transforms.RandomRotation.get_params([-180, 180]) # 随机角度
+            frame0 = transforms.functional.rotate(frame0, angle)
+            frame_t = transforms.functional.rotate(frame_t, angle)
+            frame1 = transforms.functional.rotate(frame1, angle)
+
+        if self.horizontal_flip:
+            if torch.rand(1) > 0.5:
+                frame0 = transforms.functional.hflip(frame0)
+                frame_t = transforms.functional.hflip(frame_t)
+                frame1 = transforms.functional.hflip(frame1)
+
+        # 应用色彩抖动 (如果在 __init__ 中定义了)
+        if self.color_jitter:
+            color_jitter = transforms.ColorJitter(**self.color_jitter)  # 使用解包运算符
+            frame0 = color_jitter(frame0)
+            frame_t = color_jitter(frame_t)
+            frame1 = color_jitter(frame1)
+
+        # 定义默认转换
+        default_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
         if self.transform:
             frame0 = self.transform(frame0)
             frame_t = self.transform(frame_t)
             frame1 = self.transform(frame1)
         else:
-             # 默认转换
-            transform = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-            ])
-            frame0 = transform(frame0)
-            frame_t = transform(frame_t)
-            frame1 = transform(frame1)
+            frame0 = default_transform(frame0)
+            frame_t = default_transform(frame_t)
+            frame1 = default_transform(frame1)
+
         return frame0, frame_t, frame1
-
-# 测试代码
-if __name__ == '__main__':
-    # 创建一个虚拟数据集目录结构（仅用于测试）
-    os.makedirs('data/processed/train/test_video', exist_ok=True)
-    for i in range(7):
-        dummy_image = Image.new('RGB', (64, 48), color=(i*30, i*30, i*30)) # 创建一些虚拟图像
-        dummy_image.save(f'data/processed/train/test_video/frame{i:02d}.png')
-
-    dataset = VideoDataset(data_dir='data/processed/train', frame_interval=1) # data_dir指向'train'目录
-    print(f"Dataset size: {len(dataset)}") # 应该输出Dataset size: 5
-    frame0, frame_t, frame1 = dataset[0]
-    print(f"Frame shape: {frame0.shape}") # 应该输出Frame shape: torch.Size([3, 48, 64])

@@ -1,6 +1,39 @@
-batch_size: 2
-learning_rate: 0.0003
-num_epochs: 20
-train_data_dir: 'data/processed/train'
-val_data_dir: 'data/processed/val'
-checkpoint_path: 'checkpoints'
+batch_size: 4  # 批处理大小：每次迭代训练使用的样本数量。数值越大，通常训练越快，但也可能需要更多内存。
+learning_rate: 0.0001  # 学习率：控制模型在每次参数更新时的调整幅度。 较小的学习率可能需要更长时间才能收敛，但可以避免过度调整。
+num_epochs: 100  # 训练轮数：完整数据集在训练过程中被遍历的次数。 更多的轮数可能提高模型性能，但也可能导致过拟合。
+train_data_dir: "data/processed/train"  # 训练数据目录：包含训练图像的文件夹路径。请确保路径正确。
+val_data_dir: "data/processed/val"  # 验证数据目录：包含验证图像的文件夹路径。 用于在训练期间评估模型性能并进行超参数调整。
+
+checkpoint_path: "checkpoints"  # 检查点保存路径：用于保存训练过程中模型的权重。 这允许您在中断后恢复训练。
+best_model_path: "best_ema_vfi.pth"  # 最佳模型保存路径：保存训练过程中验证集上表现最佳的模型。
+
+# 模型参数：
+#flow_layers: 2  # 光流估计网络层数：用于控制光流估计网络的深度。 更深的网络可能学习更复杂的运动模式。 # 移除这行
+
+# 损失函数权重：以下权重用于加权不同的损失函数，以指导模型训练。
+charbonnier_weight: 0.6  # Charbonnier 损失权重：用于衡量重建图像与目标图像之间的差异的损失函数。  较高的权重表明更重视重建的清晰度和准确性。
+vgg_weight: 0.05  # VGG 损失权重：使用预训练的 VGG 网络提取特征，并衡量重建图像和目标图像之间的特征差异。 有助于提高图像的感知质量。 较低的权重表明对感知质量的重视程度较低。
+color_weight: 0.25  # 色彩损失权重：衡量重建图像与目标图像之间的颜色差异。 有助于保持色彩一致性。
+gradient_weight: 0.05  # 梯度损失权重：衡量重建图像与目标图像之间的梯度差异。 有助于保留图像的细节和锐度。
+temporal_weight: 0.05  # 时间一致性损失权重：用于确保视频插帧的时间一致性。 有助于减少闪烁和其他时间伪像。
+
+# VGG Perceptual Loss 层权重 (可选):
+# 用于为 VGG 网络的每个层设置不同的权重。 如果不提供，则所有层具有相同的权重。
+layer_weights: [0.25, 0.25, 0.25, 0.25]  # 例如，为 VGG16 的 relu1_2, relu2_2, relu3_3, relu4_3 设置权重
+
+gradient_order: 1  # 梯度损失阶数：1 表示一阶梯度（Sobel 算子），2 表示二阶梯度（Laplacian 算子）。
+temporal_alpha: 1.0 # 时间一致性loss中光流loss的权重：用于平衡时间一致性损失中的像素损失和光流损失。
+
+output_image_path: "output_images" # 每一轮输出的图片保存路径，方便观察训练效果
+
+# 色彩抖动：这些参数用于在训练期间对图像进行随机颜色变换，以提高模型的泛化能力。
+color_jitter:
+  brightness: 0.2  # 亮度抖动幅度：随机调整图像亮度的最大幅度。
+  contrast: 0.2  # 对比度抖动幅度：随机调整图像对比度的最大幅度。
+  saturation: 0.2  # 饱和度抖动幅度：随机调整图像饱和度的最大幅度。
+  hue: 0.1  # 色调抖动幅度：随机调整图像色调的最大幅度。
+
+# 数据增强：以下参数用于在训练期间对图像进行随机变换，以提高模型的泛化能力。
+crop_size: [256, 256]  # 随机裁剪大小：从图像中随机裁剪出的区域大小。  有助于模型学习处理不同大小的对象。
+random_rotation: True  # 是否随机旋转：如果为 True，则在训练期间随机旋转图像。
+horizontal_flip: True  # 是否水平翻转：如果为 True，则在训练期间随机水平翻转图像。
