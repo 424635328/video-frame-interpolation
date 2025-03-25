@@ -24,7 +24,7 @@ class ModulatedDeformConvPack(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, bias=True):
         super(ModulatedDeformConvPack, self).__init__()
         self.in_channels = in_channels
-        self.out_channels = in_channels # 修改这里！
+        self.out_channels = in_channels
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
@@ -42,7 +42,7 @@ class ModulatedDeformConvPack(nn.Module):
         nn.init.constant_(self.offset_conv.weight, 0.)
         nn.init.constant_(self.offset_conv.bias, 0.)
 
-        self.dcn_v2 = DeformConv2d(self.in_channels,  # 修改这里！
+        self.dcn_v2 = DeformConv2d(self.in_channels,
                                      self.out_channels,
                                      kernel_size=self.kernel_size,
                                      stride=self.stride,
@@ -61,7 +61,7 @@ class ModulatedDeformConvPack(nn.Module):
 
 # EMA-VFI 模型
 class EMA_VFI(nn.Module):
-    def __init__(self, in_channels=3, mid_channels=64, num_blocks=3): #移除deformable_groups参数，不再控制
+    def __init__(self, in_channels=3, mid_channels=64, num_blocks=3): 
         super(EMA_VFI, self).__init__()
 
         self.in_channels = in_channels
@@ -94,7 +94,7 @@ class EMA_VFI(nn.Module):
 
          # 4. Multi-Attention Fusion (多头注意力融合)
         self.attention_blocks = nn.ModuleList([
-            ModulatedDeformConvPack(self.mid_channels+3, self.mid_channels + 3, kernel_size=3, padding=1, groups=1) #取消了和deformable_groups的绑定
+            ModulatedDeformConvPack(self.mid_channels+3, self.mid_channels + 3, kernel_size=3, padding=1, groups=1) 
             for _ in range(self.num_blocks)
         ])
 

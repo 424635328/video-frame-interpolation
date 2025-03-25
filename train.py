@@ -6,7 +6,7 @@ if __name__ == '__main__':
     from src.utils.data_utils import VideoDataset  # 确保路径正确
     import torch.optim as optim
     import yaml
-    import os  # 导入 os 模块
+    import os  
     from tqdm import tqdm  # 导入 tqdm
     import torchvision.utils as vutils  # 用于保存图像
     from PIL import Image
@@ -36,7 +36,6 @@ if __name__ == '__main__':
     random_grayscale = config.get('random_grayscale', 0.1)  # 获取随机灰度转换概率
 
     # 准备数据集
-    # 修改数据加载部分
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -45,21 +44,21 @@ if __name__ == '__main__':
     train_dataset = VideoDataset(data_dir=train_data_dir,
                                  transform=transform,
                                  color_jitter=color_jitter_params,
-                                 crop_size=config.get('crop_size', (256, 256)), # 添加 crop_size
-                                 random_rotation=config.get('random_rotation', True), # 添加 random_rotation
+                                 crop_size=config.get('crop_size', (256, 256)),
+                                 random_rotation=config.get('random_rotation', True),
                                  horizontal_flip=config.get('horizontal_flip', True),
-                                 random_grayscale=random_grayscale) # 添加 horizontal_flip
+                                 random_grayscale=random_grayscale) 
 
     val_dataset = VideoDataset(data_dir=val_data_dir,
                               transform=transform,
                               color_jitter=color_jitter_params,
-                              crop_size=config.get('crop_size', (256, 256)), # 添加 crop_size
-                              random_rotation=config.get('random_rotation', True), # 添加 random_rotation
+                              crop_size=config.get('crop_size', (256, 256)), 
+                              random_rotation=config.get('random_rotation', True), 
                               horizontal_flip=config.get('horizontal_flip', True),
-                              random_grayscale=random_grayscale) # 添加 horizontal_flip
+                              random_grayscale=random_grayscale) 
 
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0) # 设置为 0
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0) # 设置为 0
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0) 
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0) 
 
 
     print(f"Train dataset size: {len(train_dataset)}, Val dataset size: {len(val_dataset)}")
@@ -67,7 +66,7 @@ if __name__ == '__main__':
     # 初始化模型、优化器和损失函数
     model = EMA_VFI().to(device)
 
-    # **重要： 你需要初始化你的光流估计网络并移动到正确的设备**
+    # **你需要初始化你的光流估计网络并移动到正确的设备**
     # **你需要替换下面的`YourFlowEstimator()` 为你实际的光流估计模型**
     try:
         from models.sepconv_enhanced import YourFlowEstimator  # 确保路径正确
@@ -77,7 +76,7 @@ if __name__ == '__main__':
         flow_estimator = None
 
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-5)
-    # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6) # 替换为 ReduceLROnPlateau
+    # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-5) # 替换为 ReduceLROnPlateau
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True) #factor 每次降低的比例，patience可以容忍的轮数
     vgg_loss_fn = VGGPerceptualLoss(layer='relu2_2').to(device) # 修改 VGG loss 的参数
     print("模型初始化完成!")

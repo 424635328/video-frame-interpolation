@@ -68,7 +68,7 @@ class VideoDataset(Dataset):
                 frame_t = transforms.functional.hflip(frame_t)
                 frame1 = transforms.functional.hflip(frame1)
 
-        # 应用色彩抖动 (如果在 __init__ 中定义了)
+        # 应用色彩抖动
         if self.color_jitter:
             color_jitter = transforms.ColorJitter(**self.color_jitter)  # 使用解包运算符
             frame0 = color_jitter(frame0)
