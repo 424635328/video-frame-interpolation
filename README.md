@@ -1,4 +1,4 @@
-[English](README.md) | [简体中文](README_zh.md)
+[English](README_en.md) | [简体中文](README.md)
 
 # 基于 EMA-VFI 的视频帧插值
 
