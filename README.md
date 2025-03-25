@@ -39,9 +39,9 @@ pip install -r requirements.txt
 
 **错误处理:**
 
-*   **CUDA 错误:** 如果您遇到 CUDA 相关错误，请确保您的 PyTorch 安装支持 CUDA，并且您的 CUDA 驱动程序与 PyTorch 版本兼容。
-*   **依赖项冲突:**  使用虚拟环境 (virtualenv 或 conda) 来隔离项目依赖项，避免与其他 Python 项目的冲突。
-*   **版本不匹配:** 仔细检查 `requirements.txt` 中的依赖项版本，并确保它们与您的环境兼容。
+*   **CUDA 错误:** 如果您遇到 CUDA 相关错误，请确保您的 PyTorch 安装支持 CUDA，并且您的 CUDA 驱动程序与 PyTorch 版本兼容。 常见的 CUDA 相关错误包括：`CUDA out of memory`、`CUDNN_STATUS_INTERNAL_ERROR` 等。 请检查 CUDA 版本是否与 PyTorch 版本匹配，并确保 CUDA 驱动程序已正确安装。
+*   **依赖项冲突:**  使用虚拟环境 (virtualenv 或 conda) 来隔离项目依赖项，避免与其他 Python 项目的冲突。 建议使用 Anaconda 创建虚拟环境：`conda create -n vfi python=3.8`。
+*   **版本不匹配:** 仔细检查 `requirements.txt` 中的依赖项版本，并确保它们与您的环境兼容。 尤其是 `torch` 和 `torchvision` 的版本要对应。
 
 ## 数据准备
 
@@ -82,12 +82,17 @@ pip install -r requirements.txt
 
     **重要注意事项:**
 
-    *   **数据增强:** 考虑使用数据增强技术（例如，随机裁剪、翻转、旋转、颜色抖动）以提高模型的泛化能力。 在您的数据加载管道中实现这些增强。  数据增强可以帮助模型更好地适应不同的场景和光照条件。
-    *   **文件格式:** 确保图像文件采用与 OpenCV 兼容的格式（例如，PNG，JPG）。  不同的图像格式可能需要不同的解码器。
-    *   **分辨率:** 模型可能具有特定的输入分辨率要求。 在预处理期间根据需要调整图像大小。  调整大小可能会影响图像质量和模型性能。 保持长宽比通常是重要的。
+    *   **文件命名规范:** 务必确保图像文件名是连续的且格式一致，例如 `frame_00001.png, frame_00002.png,...`。  可以使用脚本批量重命名文件。
+    *   **数据增强 (至关重要):** 由于数据集较小，强烈建议使用数据增强技术来提高模型的泛化能力，避免过拟合。 尝试以下增强方法，并根据实际效果调整参数：
+        *   **随机裁剪:**  从图像中随机裁剪一块区域 (`crop_size` 参数)。
+        *   **随机旋转:**  随机旋转图像 (`random_rotation` 参数)。
+        *   **水平翻转:**  随机水平翻转图像 (`horizontal_flip` 参数)。
+        *   **颜色抖动:**  随机调整图像的亮度、对比度、饱和度和色调 (`color_jitter` 参数)。  请注意，过度的颜色抖动可能会导致颜色失真。
+        *   **随机灰度转换:**  将图像转换为灰度图像 (`random_grayscale` 参数)。
+    *   **文件格式:** 确保图像文件采用与 OpenCV 兼容的格式（例如，PNG，JPG）。  不同的图像格式可能需要不同的解码器。 推荐使用 PNG 格式，因为它是无损压缩。
+    *   **分辨率:** 模型可能具有特定的输入分辨率要求。 在预处理期间根据需要调整图像大小。  调整大小可能会影响图像质量和模型性能。 保持长宽比通常是重要的， 可以考虑使用 `cv2.resize` 函数进行图像缩放。
     *   **`.flo` 文件转换:** Middlebury 数据集包含 `.flo` 文件中的光流信息。 如果您的训练管道使用此信息，则需要将这些文件转换为合适的格式（例如，图像或 NumPy 数组）。 有现有的工具和库可用于读取 `.flo` 文件（在线搜索“python read .flo file”）。  确保使用正确的库来读取和解析 `.flo` 文件。
-    *   **数据校验:**  编写脚本来校验预处理后的数据，例如检查图像是否已正确加载，以及光流数据是否有效。
-    *   **内存管理:**  对于大型数据集，请考虑使用数据加载器的批处理和预取功能来有效地管理内存。
+    *   **数据校验:**  编写脚本来校验预处理后的数据，例如检查图像是否已正确加载，图像尺寸是否一致，以及文件数量是否正确。 可以使用 `PIL.Image.verify()` 检查图像是否损坏。
 
 **错误处理:**
 
@@ -99,62 +104,93 @@ pip install -r requirements.txt
 
 1.  **配置训练:**
 
-    修改 `config/train_config.yaml` 文件以调整训练参数(注意本项目对GPU内存要求较高，建议使用至少8GB显存的GPU)：
+    修改 `config/train_config.yaml` 文件以调整训练参数。 **以下参数针对小数据集训练进行了优化，并降低了学习率以提高训练的稳定性。**
 
     ```yaml
-    batch_size: 2
-    learning_rate: 0.0003
-    num_epochs: 20
-    train_data_dir: 'data/processed/train'
-    val_data_dir: 'data/processed/val'
-    checkpoint_path: 'checkpoints'
-    best_model_path: 'best_ema_vfi.pth'
-    device: 'cuda'  # 或 'cpu'
-    weight_decay: 0.0001 # L2 正则化
-    clip_grad_norm: 1.0 # 梯度裁剪，防止梯度爆炸
-    scheduler: "ReduceLROnPlateau" # 学习率调整策略，可以是 "StepLR", "MultiStepLR", "ReduceLROnPlateau"
-    # StepLR 配置
-    step_size: 10 # 每隔多少个 epoch 降低学习率
-    gamma: 0.1 # 学习率降低的倍数
-    # MultiStepLR 配置
-    milestones: [10, 15] # 在哪些 epoch 降低学习率
-    # ReduceLROnPlateau 配置
-    patience: 3 # 验证损失多少个 epoch 没有改善后降低学习率
-    factor: 0.1 # 学习率降低的倍数
+    batch_size: 2       # 批处理大小，小的 batch_size 有助于缓解小数据集上的过拟合
+    learning_rate: 0.00005 # 学习率，降低学习率有助于稳定训练
+    num_epochs: 100       # 训练轮数， 增加训练轮数以获得更好的性能
+    train_data_dir: "data/processed/train" # 训练数据路径
+    val_data_dir: "data/processed/val"   # 验证数据路径
+
+    checkpoint_path: "checkpoints"    # 模型保存路径
+    best_model_path: "best_ema_vfi.pth" # 最优模型路径
+
+    # 损失函数权重， 可以根据训练情况进行调整
+    charbonnier_weight: 0.6
+    vgg_weight: 0.05
+    color_weight: 0.25
+    gradient_weight: 0.05
+    temporal_weight: 0.05
+
+    gradient_order: 1  # 梯度损失阶数
+    temporal_alpha: 1.0 # 时间一致性loss权重
+
+    output_image_path: "output_images"
+
+    # 数据增强参数
+    color_jitter:
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.1
+
+    crop_size: [256, 256]
+    random_rotation: True
+    horizontal_flip: True
+    random_grayscale: 0.2
     ```
 
-    *   `batch_size`: 训练的批次大小。 增加批次大小通常可以提高训练速度，但需要更多的 GPU 内存。
-    *   `learning_rate`: AdamW 优化器的学习率。  选择合适的学习率对训练至关重要。 可以尝试不同的学习率，并使用学习率调整策略。
-    *   `num_epochs`: 训练 epoch 的数量。  训练更多的 epoch 通常可以提高模型性能，但也会增加训练时间。
+    *   `batch_size`: 训练的批次大小。  较小的批次大小可以减少 GPU 内存的使用，并且可能有助于提高小数据集上的泛化能力。
+    *   `learning_rate`: AdamW 优化器的学习率。  **对于小数据集，通常需要使用更小的学习率。** 5e-5 是一个合理的起点， 您也可以尝试更小的值，例如 1e-5。
+    *   `num_epochs`: 训练 epoch 的数量。  **增加训练轮数可以使模型更充分地学习数据集的特征。** 100 轮是一个合理的起点， 但您可以根据验证集的性能进行调整。
     *   `train_data_dir`: 训练数据目录的路径。
     *   `val_data_dir`: 验证数据目录的路径。
     *   `checkpoint_path`: 存储模型检查点的路径。  定期保存检查点可以防止训练中断时丢失进度。
     *   `best_model_path`: 用于保存最佳模型的文件名。  基于验证集性能选择最佳模型。
     *   `device`: 指定用于训练的设备（'cuda' 或 'cpu'）。  如果您的机器没有 GPU，请使用 'cpu'。
-    *   `weight_decay`: L2 正则化系数，防止过拟合。
-    *   `clip_grad_norm`: 梯度裁剪的最大范数，防止梯度爆炸。
-    *   `scheduler`: 学习率调整策略，可以是 "StepLR", "MultiStepLR", "ReduceLROnPlateau"。
-        *   `StepLR`: 每隔 `step_size` 个 epoch 将学习率乘以 `gamma`。
-        *   `MultiStepLR`: 在指定的 `milestones` 处将学习率乘以 `gamma`。
-        *   `ReduceLROnPlateau`: 当验证损失在 `patience` 个 epoch 内没有改善时，将学习率乘以 `factor`。
+    *   `charbonnier_weight`, `vgg_weight`, `color_weight`, `gradient_weight`, `temporal_weight`: 这些是不同损失函数的权重。 由于是小数据集， **建议谨慎调整这些权重，避免过度依赖某些损失函数导致模型不稳定。**
+    *   `color_jitter`, `crop_size`, `random_rotation`, `horizontal_flip`, `random_grayscale`: 这些是数据增强相关的参数。 **合理设置这些参数可以有效提高模型的泛化能力。**
+
+    **重要:**  针对小数据集的训练，重点在于防止过拟合和稳定训练过程。  可以尝试以下策略：
+
+    *   **降低学习率 (已完成):**  使用较小的学习率，例如 5e-5 或 1e-5。
+    *   **增加训练轮数 (已完成):**  训练更多的 epoch，例如 100 轮或更多。
+    *   **使用更强的数据增强 (参考数据准备部分):**  合理设置数据增强参数。
+    *   **使用权重衰减 (L2 正则化):**  尝试增加 `weight_decay`，例如 1e-4 或 1e-3。
+    *   **使用 Dropout:**  在模型中添加 Dropout 层，以随机丢弃一些神经元，防止模型过度依赖某些特征。
+    *   **使用 Early Stopping:**  监控验证集的性能，并在验证损失停止下降时提前停止训练。  这可以避免模型在训练集上过拟合。
+    *   **梯度裁剪:**  使用梯度裁剪可以防止梯度爆炸，使训练更加稳定。
 
 2.  **开始训练:**
 
     运行 `train.py` 脚本:
 
     ```bash
-    python train.py --config config/train_config.yaml
+    python train.py
     ```
 
     训练进度，包括损失和验证损失，将显示在控制台中。 最佳模型将保存到指定的 `best_model_path`。 强烈建议使用 TensorBoard 集成来监控训练进度，例如损失曲线、学习率变化等。
 
 **错误处理:**
 
-*   **内存不足 (OOM) 错误:**  如果遇到 CUDA 内存不足错误，请减小 `batch_size`，减少模型大小，或使用梯度累积。
-*   **梯度爆炸/消失:**  使用梯度裁剪 (`clip_grad_norm`) 和适当的权重初始化来缓解梯度问题。
-*   **训练不收敛:**  调整学习率、批次大小、优化器参数或模型架构。 确保数据已正确预处理。
-*   **过拟合:**  使用数据增强、权重衰减或 dropout 来减少过拟合。
-*   **配置文件错误:**  使用 YAML 解析器验证配置文件的格式是否正确。
+*   **CUDA 内存不足 (OOM) 错误:**
+    *   减小 `batch_size`。
+    *   使用更小的图像尺寸。
+    *   尝试使用 `torch.utils.checkpoint` 来减少内存使用。
+*   **梯度爆炸/消失:**
+    *   使用梯度裁剪 (`clip_grad_norm`)。
+    *   使用适当的权重初始化方法。
+    *   降低学习率。
+*   **训练不收敛:**
+    *   检查学习率是否合适，调整学习率调整策略。
+    *   检查数据预处理步骤是否正确，确保数据集质量。
+    *   检查损失函数是否正确，以及是否使用了正确的损失权重。
+*   **过拟合:**
+    *   使用更强的数据增强。
+    *   增加权重衰减。
+    *   使用 Dropout。
+    *   使用 Early Stopping。
 
 ## 评估
 
@@ -193,7 +229,7 @@ python inference.py
 
 *   `--input_video`: 输入视频文件的路径。  支持常见的视频格式，例如 MP4, AVI 等。
 *   `--output_video`: 输出视频文件的路径。  确保输出路径具有写入权限。
-*   `--model_path`: 训练好的模型权重文件的路径。  确保模型权重文件存在且有效。
+*   `--model_path`: 训练好的模型权重文件的路径。  确保模型权重文件存在且与当前模型架构兼容。
 *   `--target_fps`: 输出视频的目标帧率。  增加目标帧率可以提高视频的流畅度。
 *   `--interpolation_factor`: 在每对输入帧之间插入的帧数。 此参数直接控制输出帧率。  `interpolation_factor = n` 将在每对输入帧之间插入 `n` 帧。
 *   `--frame_interval`: 处理来自输入视频的每 n 帧。 默认为 1（处理所有帧）。 大于 1 的值允许跳过帧以进行测试或性能原因。 例如，`frame_interval = 2` 将只处理视频中的每隔一帧。
@@ -203,10 +239,21 @@ python inference.py
 
 **错误处理:**
 
-*   **视频读取错误:** 检查输入视频文件是否存在且有效。  OpenCV 可能不支持某些视频编解码器。
-*   **模型加载错误:** 确保模型文件存在且与当前模型架构兼容。
-*   **视频写入错误:** 检查输出路径是否具有写入权限，并且 OpenCV 可以写入指定的视频格式。
-*   **设备不可用:** 确保指定的设备（'cuda' 或 'cpu'）可用。
+*   **视频读取错误:**
+    *   检查输入视频文件是否存在且有效。
+    *   确保 OpenCV 支持您使用的视频格式。
+    *   尝试安装或更新相关的视频编解码器。
+*   **模型加载错误:**
+    *   确保模型文件存在且与当前模型架构兼容。
+    *   检查模型文件是否损坏。
+    *   如果模型文件是在不同的 PyTorch 版本下训练的，可能会出现兼容性问题。  建议在相同的 PyTorch 版本下进行推理。
+*   **视频写入错误:**
+    *   检查输出路径是否具有写入权限。
+    *   确保 OpenCV 可以写入指定的视频格式。
+    *   检查磁盘空间是否足够。
+*   **设备不可用:**
+    *   确保指定的设备（'cuda' 或 'cpu'）可用。
+    *   如果使用 CUDA，请确保已正确安装 CUDA 驱动程序，并且 PyTorch 可以访问 GPU。
 
 ## 项目结构
 
@@ -218,8 +265,8 @@ python inference.py
 │   ├── models/
 │   │   └── ema_vfi.py             # EMA-VFI 模型定义
 │   ├── utils/
-│   │   ├── data_utils.py           # 数据集和数据加载实用程序
-│   │   ├── loss_functions.py      # 损失函数定义
+│   │   └── data_utils.py           # 数据集和数据加载实用程序
+│   │   └── loss_functions.py      # 损失函数定义
 │   │   └── ...
 ├── train.py                       # 训练脚本
 ├── inference.py                   # 推理脚本
