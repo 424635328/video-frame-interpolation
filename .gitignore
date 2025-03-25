@@ -5,6 +5,8 @@ __pycache__/
 
 checkpoints/
 checkpoints
+output_images/
+output_flo/
 
 # C extensions
 *.so
