@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 1.  **下载 Middlebury 数据集:**
     *   从 [https://vision.middlebury.edu/flow/data/](https://vision.middlebury.edu/flow/data/) 下载所需的立体图像对。
-    *   选择适当的数据集版本（例如，“其他数据集”）。  根据您的需求选择数据集的大小和复杂性。
+    *   可以选择适当的数据集版本,根据您的需求选择数据集的大小和复杂性。
 
 2.  **预处理数据集:**
 
