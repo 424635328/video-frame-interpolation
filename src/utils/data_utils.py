@@ -3,13 +3,15 @@ import os
 from PIL import Image
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
+import random
 
 class VideoDataset(Dataset):
     def __init__(self, data_dir, transform=None, frame_interval=1,
-                  crop_size=(256, 256),  # 添加 crop_size 参数
-                 random_rotation=True,  # 添加 random_rotation 参数
-                 horizontal_flip=True,  # 添加 horizontal_flip 参数
-                 color_jitter=None):  # 添加 color_jitter 参数
+                  crop_size=(256, 256),
+                 random_rotation=True,
+                 horizontal_flip=True,
+                 color_jitter=None,
+                 random_grayscale=0.1): # 添加随机灰度转换
         self.data_dir = data_dir
         self.transform = transform
         self.frame_interval = frame_interval
@@ -18,6 +20,7 @@ class VideoDataset(Dataset):
         self.random_rotation = random_rotation
         self.horizontal_flip = horizontal_flip
         self.color_jitter = color_jitter
+        self.random_grayscale = random_grayscale # 随机灰度转换的概率
 
         # 遍历每个视频序列 (例如 "Beanbags")
         for video_dir in os.listdir(self.data_dir):
@@ -60,7 +63,7 @@ class VideoDataset(Dataset):
             frame1 = transforms.functional.rotate(frame1, angle)
 
         if self.horizontal_flip:
-            if torch.rand(1) > 0.5:
+            if random.random() > 0.5: # 使用 random.random()
                 frame0 = transforms.functional.hflip(frame0)
                 frame_t = transforms.functional.hflip(frame_t)
                 frame1 = transforms.functional.hflip(frame1)
@@ -71,6 +74,12 @@ class VideoDataset(Dataset):
             frame0 = color_jitter(frame0)
             frame_t = color_jitter(frame_t)
             frame1 = color_jitter(frame1)
+
+        # 随机灰度转换
+        if random.random() < self.random_grayscale:
+            frame0 = transforms.functional.to_grayscale(frame0, num_output_channels=3) # 转换为3通道灰度图
+            frame_t = transforms.functional.to_grayscale(frame_t, num_output_channels=3)
+            frame1 = transforms.functional.to_grayscale(frame1, num_output_channels=3)
 
         # 定义默认转换
         default_transform = transforms.Compose([

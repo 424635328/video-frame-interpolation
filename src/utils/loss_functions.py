@@ -25,13 +25,13 @@ class VGGPerceptualLoss(torch.nn.Module):
     """
     使用预训练的 VGG16 网络计算感知损失。
     """
-    def __init__(self, resize=True, normalize=True):
+    def __init__(self, resize=True, normalize=True, layer='relu3_3'): # 添加 layer 参数
         super(VGGPerceptualLoss, self).__init__()
         blocks = []
-        blocks.append(models.vgg16(pretrained=True).features[:4].eval())
-        blocks.append(models.vgg16(pretrained=True).features[4:9].eval())
-        blocks.append(models.vgg16(pretrained=True).features[9:16].eval())
-        blocks.append(models.vgg16(pretrained=True).features[16:23].eval())
+        blocks.append(models.vgg16(pretrained=True).features[:4].eval()) # relu1_2
+        blocks.append(models.vgg16(pretrained=True).features[4:9].eval()) # relu2_2
+        blocks.append(models.vgg16(pretrained=True).features[9:16].eval()) # relu3_3
+        blocks.append(models.vgg16(pretrained=True).features[16:23].eval()) # relu4_3
         for bl in blocks:
             for p in bl.parameters():
                 p.requires_grad = False
@@ -41,6 +41,14 @@ class VGGPerceptualLoss(torch.nn.Module):
         self.std = torch.nn.Parameter(torch.tensor([0.229, 0.224, 0.225]).view(1,3,1,1))
         self.resize = resize
         self.normalize = normalize
+        self.layer = layer # 指定使用的 VGG 层
+
+        self.layer_index = {
+            'relu1_2': 0,
+            'relu2_2': 1,
+            'relu3_3': 2,
+            'relu4_3': 3
+        }[layer]
 
     def forward(self, input, target):
         if self.resize:
@@ -52,10 +60,12 @@ class VGGPerceptualLoss(torch.nn.Module):
         loss = 0.0
         x = input
         y = target
-        for block in self.blocks:
+        for i, block in enumerate(self.blocks):
             x = block(x)
             y = block(y)
-            loss += torch.nn.functional.l1_loss(x, y)
+            if i == self.layer_index:  # 只计算指定层的损失
+                loss += torch.nn.functional.l1_loss(x, y)
+                break  # 停止计算后续层的损失
         return loss
 
 # 梯度损失
@@ -77,8 +87,8 @@ def gradient_loss(pred, target):
         # 遍历每个通道
         for c in range(x.shape[1]):
             # 对每个通道应用 Sobel 算子
-            Gx[:, c:c+1] = F.conv2d(x[:, c:c+1], sobel_filter_x, padding=1)
-            Gy[:, c:c+1] = F.conv2d(x[:, c:c+1], sobel_filter_y, padding=1)
+            Gx[:, c:c+1] = F.conv2d(x[:, c:c+1], sobel_filter_x, padding=1, groups=1) # 明确指定groups
+            Gy[:, c:c+1] = F.conv2d(x[:, c:c+1], sobel_filter_y, padding=1, groups=1) # 明确指定groups
 
         return Gx, Gy
 
@@ -163,7 +173,8 @@ def warp(x, flo):
     vgrid[:, 1, :, :] = 2.0 * vgrid[:, 1, :, :].clone() / max(H - 1, 1) - 1.0
 
     vgrid = vgrid.permute(0, 2, 3, 1)
-    output = F.grid_sample(x, vgrid, align_corners=True)
+    # 使用 nearest 模式，减少插值带来的artifact
+    output = F.grid_sample(x, vgrid, mode='nearest', align_corners=True)
     return output
 
 def temporal_consistency_loss(pred, frame0, frame1, flow_estimator):
