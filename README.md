@@ -116,9 +116,9 @@ pip install -r requirements.txt
     修改 `config/train_config.yaml` 文件以调整训练参数。 **以下参数已针对小数据集进行了优化，降低了学习率以提高训练的稳定性。**
 
     ```yaml
-    batch_size: 2       # 批处理大小，小的 batch_size 有助于缓解小数据集上的过拟合
-    learning_rate: 0.00005 # 学习率，降低学习率有助于稳定训练
-    num_epochs: 100       # 训练轮数， 增加训练轮数以获得更好的性能
+    batch_size: 16       # 批处理大小，小的 batch_size 有助于缓解小数据集上的过拟合
+    learning_rate: 0.0003 # 学习率，降低学习率有助于稳定训练
+    num_epochs: 200       # 训练轮数， 增加训练轮数以获得更好的性能
     train_data_dir: "data/processed/train" # 训练数据路径
     val_data_dir: "data/processed/val"   # 验证数据路径
 
