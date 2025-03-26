@@ -79,7 +79,7 @@ if __name__ == '__main__':
         flow_estimator = None
 
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-5)
-    # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-5) # 替换为 ReduceLROnPlateau
+#     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-4) # 替换为 ReduceLROnPlateau
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True) #factor 每次降低的比例，patience可以容忍的轮数
     vgg_loss_fn = VGGPerceptualLoss(layer='relu2_2').to(device) # 修改 VGG loss 的参数
     print("模型初始化完成!")
@@ -166,13 +166,16 @@ if __name__ == '__main__':
             print(f'Epoch [{epoch + 1}/{num_epochs}], Validation Loss: {val_loss:.4f}')
 
             # 保存最佳模型
-    #         if val_loss < best_val_loss:
+#             if val_loss < best_val_loss:
             best_val_loss = val_loss
             print(f"Validation loss decreased ({best_val_loss:.4f} --> {val_loss:.4f}).  Saving model ...")
             torch.save(model.state_dict(), best_model_path)  # 保存最佳模型到指定路径
 
-        # scheduler.step() # 如果使用 CosineAnnealingLR
+#       scheduler.step() # 如果使用 CosineAnnealingLR
         scheduler.step(val_loss) # 如果使用 ReduceLROnPlateau
+        # 在scheduler.step之前获取学习率
+        current_lr = optimizer.param_groups[0]['lr']
+        print(f'Epoch [{epoch + 1}/{num_epochs}], Current Learning Rate: {current_lr:.6f}')
 
         # 保存每个 epoch 的模型
         torch.save(model.state_dict(), os.path.join(checkpoint_path, f'ema_vfi_epoch_{epoch + 1}.pth'))

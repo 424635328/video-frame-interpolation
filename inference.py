@@ -130,7 +130,7 @@ if __name__ == "__main__":
     args.input_video = "input.mp4"
     args.output_video = "output.mp4"
     args.model_path = "best_ema_vfi.pth"
-    args.target_fps = 60
+    args.target_fps = 165
     args.interpolation_factor = 1
     args.frame_interval = 1
     args.device = "cuda"
