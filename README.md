@@ -14,14 +14,14 @@
 
 **如何在 AutoDL 上运行本项目：**
 
-1.  **创建实例：** 在 AutoDL 上选择合适的 GPU 型号 (例如 RTX 4090, A100)，推荐选择预装 PyTorch 的镜像 (例如 `yolov5-master v1`)，节省环境配置时间。
+1.  **创建实例：** 在 AutoDL 上选择合适的 GPU 型号 (例如 RTX 4090, v100)，推荐选择预装 PyTorch 的镜像 (例如 `yolov5-master v1`)，节省环境配置时间。
 2.  **上传代码：** 将项目代码克隆到 AutoDL 实例：`git clone https://github.com/424635328/video-frame-interpolation`。 如果有预处理的数据集，也一并上传。
 3.  **安装依赖：** 运行 `pip install -r requirements.txt` 安装项目所需依赖。
 4.  **配置训练：** 修改 `config/train_config.yaml`，根据你选择的 GPU 型号调整 `batch_size` 等参数。 显存越大，`batch_size` 可以设置得越大，从而提高训练效率。
 5.  **运行脚本：** 运行 `python train.py` 或 `python inference.py` 开始训练或推理。
 6.  **下载结果：** 训练完成后，将模型或推理结果下载到本地。
 
-使用 AutoDL 能大幅简化 VFI 模型的训练流程，并获得更好的性能。
+使用 AutoDL 能大幅缩短 VFI 模型的训练时间，并获得更好的性能。
 
 ## 模型架构概览
 
