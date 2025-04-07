@@ -1,17 +1,18 @@
-if __name__ == '__main__':
-    import torch
-    from torch.utils.data import DataLoader
-    from src.models.ema_vfi import EMA_VFI
-    from src.utils.loss_functions import total_loss, VGGPerceptualLoss, color_histogram_loss, charbonnier_loss, gradient_loss, temporal_consistency_loss, warp # 导入所有损失函数
-    from src.utils.data_utils import VideoDataset  # 确保路径正确
-    import torch.optim as optim
-    import yaml
-    import os  
-    from tqdm import tqdm  # 导入 tqdm
-    import torchvision.utils as vutils  # 用于保存图像
-    from PIL import Image
-    import torchvision.transforms as transforms
+import torch
+from torch.utils.data import DataLoader
+from src.models.ema_vfi import EMA_VFI
+from src.utils.loss_functions import total_loss, VGGPerceptualLoss, color_histogram_loss, charbonnier_loss, gradient_loss, temporal_consistency_loss, warp # 导入所有损失函数
+from src.utils.data_utils import VideoDataset  # 确保路径正确
+import torch.optim as optim
+import yaml
+import os
+from tqdm import tqdm  # 导入 tqdm
+import cv2  # 使用cv2保存图像
+from PIL import Image
+import torchvision.transforms as transforms
+import numpy as np
 
+if __name__ == '__main__':
     # 加载配置文件
     with open('config/train_config.yaml', 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
@@ -28,7 +29,7 @@ if __name__ == '__main__':
     best_model_path = config.get('best_model_path', 'best_ema_vfi.pth')  # 用于存储最佳模型的文件名，并尝试从配置文件中读取，默认为根目录下的best_ema_vfi.pth
     charbonnier_weight = config.get('charbonnier_weight', 1.0)  # 获取 charbonnier 权重
     vgg_weight = config.get('vgg_weight', 0.05) # 获取 vgg 权重
-    color_weight = config.get('color_weight', 0.0) # 获取色彩损失权重，默认为0.0
+    color_weight = config.get('color_weight', 0.1) # 获取色彩损失权重，默认为0.0, 调整为0.1
     gradient_weight = config.get('gradient_weight', 0.0) # 获取梯度损失权重
     temporal_weight = config.get('temporal_weight', 0.0)  # 获取时间一致性损失权重
     output_image_path = config.get('output_image_path', 'output_images') # 获取图像的输出路径
@@ -47,18 +48,18 @@ if __name__ == '__main__':
                                  crop_size=config.get('crop_size', (256, 256)),
                                  random_rotation=config.get('random_rotation', True),
                                  horizontal_flip=config.get('horizontal_flip', True),
-                                 random_grayscale=random_grayscale) 
+                                 random_grayscale=random_grayscale)
 
     val_dataset = VideoDataset(data_dir=val_data_dir,
                               transform=transform,
                               color_jitter=color_jitter_params,
-                              crop_size=config.get('crop_size', (256, 256)), 
-                              random_rotation=config.get('random_rotation', True), 
+                              crop_size=config.get('crop_size', (256, 256)),
+                              random_rotation=config.get('random_rotation', True),
                               horizontal_flip=config.get('horizontal_flip', True),
-                              random_grayscale=random_grayscale) 
+                              random_grayscale=random_grayscale)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0) 
-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0) 
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
 
     print(f"Train dataset size: {len(train_dataset)}, Val dataset size: {len(val_dataset)}")
@@ -124,7 +125,7 @@ if __name__ == '__main__':
                 loss.backward()
 
                 # 梯度裁剪
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.01) # 添加梯度裁剪
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.1) # 调整梯度裁剪
 
                 optimizer.step()
 
@@ -136,10 +137,20 @@ if __name__ == '__main__':
                 # 保存生成图像 (每个 epoch 只保存一次)
                 if i == 0:
                     # 保存生成图像 (将数据缩放到 [0, 1] 范围)
-                    img = pred_frame_t[0].cpu().detach() # 拿出第一张图片
-                    # 确保图像数据在 [0, 1] 范围内
-                    img = torch.clamp(img, 0, 1)
-                    vutils.save_image(img, os.path.join(output_image_path, f"epoch_{epoch+1}_generated.png"))
+                    img = pred_frame_t[0].cpu().detach()
+
+                    # 反归一化
+                    mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
+                    std = torch.tensor([0.229, 0.224, 0.225]).to(device)
+                    img = img * std[:, None, None] + mean[:, None, None]  # 反归一化
+                    img = torch.clamp(img, 0, 1)  # 确保范围在 0 到 1 之间
+
+                    # 转换成numpy数组，并调整维度顺序
+                    img = (img.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+
+                    # 使用cv2保存图像
+                    cv2.imwrite(os.path.join(output_image_path, f"epoch_{epoch+1}_generated.png"), img)
+
 
         # 验证
         model.eval()
@@ -166,12 +177,10 @@ if __name__ == '__main__':
             print(f'Epoch [{epoch + 1}/{num_epochs}], Validation Loss: {val_loss:.4f}')
 
             # 保存最佳模型
-#             if val_loss < best_val_loss:
             best_val_loss = val_loss
             print(f"Validation loss decreased ({best_val_loss:.4f} --> {val_loss:.4f}).  Saving model ...")
             torch.save(model.state_dict(), best_model_path)  # 保存最佳模型到指定路径
 
-#       scheduler.step() # 如果使用 CosineAnnealingLR
         scheduler.step(val_loss) # 如果使用 ReduceLROnPlateau
         # 在scheduler.step之前获取学习率
         current_lr = optimizer.param_groups[0]['lr']
