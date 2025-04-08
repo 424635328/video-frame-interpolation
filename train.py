@@ -140,8 +140,8 @@ if __name__ == '__main__':
                     img = pred_frame_t[0].cpu().detach()
 
                     # 反归一化
-                    mean = torch.tensor([0.485, 0.456, 0.406]).to(device)
-                    std = torch.tensor([0.229, 0.224, 0.225]).to(device)
+                    mean = torch.tensor([0.485, 0.456, 0.406])
+                    std = torch.tensor([0.229, 0.224, 0.225])
                     img = img * std[:, None, None] + mean[:, None, None]  # 反归一化
                     img = torch.clamp(img, 0, 1)  # 确保范围在 0 到 1 之间
 
